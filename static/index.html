@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kimi 智能助手</title>
+    <style>
+        /* Tailwind 核心样式 */
+        .container{width:100%;margin-right:auto;margin-left:auto;padding-right:1rem;padding-left:1rem}
+        .mx-auto{margin-left:auto;margin-right:auto}
+        .px-4{padding-left:1rem;padding-right:1rem}
+        .py-8{padding-top:2rem;padding-bottom:2rem}
+        .p-6{padding:1.5rem}
+        .max-w-4xl{max-width:56rem}
+        .min-h-screen{min-height:100vh}
+        .bg-white{background-color:#fff}
+        .text-white{color:#fff}
+        .text-gray-700{color:#374151}
+        .text-2xl{font-size:1.5rem;line-height:2rem}
+        .font-bold{font-weight:700}
+        .text-center{text-align:center}
+        .rounded-2xl{border-radius:1rem}
+        .shadow-xl{box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 10px 10px -5px rgba(0,0,0,0.04)}
+        .overflow-hidden{overflow:hidden}
+        .flex{display:flex}
+        .items-center{align-items:center}
+        .justify-center{justify-content:center}
+        .overflow-y-auto{overflow-y:auto}
+        .outline-none{outline:none}
+        .mr-2{margin-right:0.5rem}
+        .mr-3{margin-right:0.75rem}
+
+        /* 自定义样式 */
+        body {
+            background: #000000;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #E5EAF3;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            background: #17171A;
+            overflow: hidden;
+            padding-left: 10px; /* 为触发区域留出空间 */
+        }
+        
+        .flex-1 {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            min-width: 0; /* 防止内容溢出 */
+            margin-left: 10px; /* 为触发区域留出空间 */
+            transition: margin-left 0.3s ease;
+        }
+        
+        .flex-1.sidebar-expanded {
+            margin-left: 260px;
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            background: #17171A;
+            margin-bottom: 80px;
+            position: relative;
+            -webkit-overflow-scrolling: touch; /* 在iOS上提供更好的滚动体验 */
+        }
+
+        /* 添加一个渐变遮罩，提示可以滚动 */
+        .chat-container::after {
+            content: '';
+            position: fixed;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(transparent, rgba(23, 23, 26, 0.8));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .chat-container.can-scroll::after {
+            opacity: 1;
+        }
+        
+        /* 自定义滚动条样式 */
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: #17171A;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #2D2D30;
+            border-radius: 4px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #3F3F46;
+        }
+        
+        .message {
+            max-width: 85%;
+            margin: 1rem 0;  /* 稍微减小消息间距 */
+            padding: 0.875rem 1.25rem;  /* 稍微调整内边距 */
+            border-radius: 12px;
+            line-height: 1.6;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            word-wrap: break-word;  /* 确保长文本会换行 */
+            overflow-wrap: break-word;
+        }
+        
+        .user-message {
+            background: #2B2B2F;
+            color: #E5EAF3;
+            margin-left: auto;
+            border: 1px solid #3F3F46;
+        }
+        
+        .bot-message {
+            background: #1E1E21;
+            color: #E5EAF3;
+            margin-right: auto;
+            border: 1px solid #3F3F46;
+            position: relative;
+            padding-right: 120px; /* 为按钮预留空间 */
+        }
+        
+        /* 修改知识库按钮样式 */
+        .save-to-kb {
+            position: absolute;
+            right: 10px;  /* 改为内部定位 */
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4F46E5;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            opacity: 0;  /* 改用opacity来控制显示/隐藏 */
+            pointer-events: none;  /* 默认不接受鼠标事件 */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            font-size: 13px;
+            white-space: nowrap;
+            display: flex;  /* 始终保持flex布局 */
+        }
+
+        .save-to-kb:hover {
+            background: #4338CA;
+        }
+
+        .bot-message:hover .save-to-kb {
+            opacity: 1;  /* 显示按钮 */
+            pointer-events: auto;  /* 允许鼠标事件 */
+        }
+        
+        .typing-container {
+            position: relative;
+            min-height: 24px;
+        }
+
+        .typing {
+            display: inline-block;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        
+        .typing span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: #A0AEC0;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        .input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #17171A;
+            padding: 1.25rem 2rem;
+            border-top: 1px solid #2D2D30;
+            z-index: 1000;
+        }
+        
+        .input-wrapper {
+            max-width: 48rem;
+            margin: 0 auto;
+            background: #1E1E21;
+            border: 1px solid #2D2D30;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);  /* 添加阴影 */
+        }
+        
+        .input-wrapper:focus-within {
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+        }
+
+        #message-input {
+            flex: 1;
+            height: 24px;
+            font-size: 15px;
+            padding: 0.5rem 1rem;
+            color: #E5EAF3;
+            background: transparent;
+            border: none;
+            outline: none;
+        }
+        
+        #message-input::placeholder {
+            color: #6B7280;
+        }
+        
+        .send-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            font-size: 14px;
+            font-weight: 500;
+            color: #E5EAF3;
+            background: #4F46E5;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .send-button:hover {
+            background: #4338CA;
+        }
+        
+        .send-button:active {
+            transform: scale(0.98);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .header {
+            padding: 1rem 2rem;
+            background: #17171A;
+            border-bottom: 1px solid #2D2D30;
+        }
+
+        /* 选项卡样式 */
+        .tabs-container {
+            padding: 0.5rem 2rem;
+            background: #1E1E21;
+            border-bottom: 1px solid #2D2D30;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #2D2D30;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab.active {
+            background: #4F46E5;
+            border-color: #4F46E5;
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            border-color: #4F46E5;
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        /* 图标样式 */
+        .icon-robot::before {
+            content: "🤖";
+            font-size: 20px;
+        }
+        
+        .icon-send::before {
+            content: "↗️";
+            font-size: 16px;
+        }
+
+        .icon-chat::before {
+            content: "💭";
+        }
+
+        .icon-translate::before {
+            content: "🌐";
+        }
+
+        .icon-book::before {
+            content: "📚";
+        }
+
+        /* 知识库抽屉样式 */
+        .knowledge-drawer {
+            position: fixed;
+            right: -320px;
+            top: 0;
+            width: 320px;
+            height: 100vh;
+            background: #1E1E21;
+            border-left: 1px solid #2D2D30;
+            transition: right 0.3s ease;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .knowledge-drawer.open {
+            right: 0;
+        }
+
+        .knowledge-header {
+            padding: 1rem;
+            border-bottom: 1px solid #2D2D30;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .knowledge-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #E5EAF3;
+        }
+
+        .close-drawer {
+            background: none;
+            border: none;
+            color: #E5EAF3;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.2rem 0.5rem;
+        }
+
+        .knowledge-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .knowledge-item {
+            background: #2B2B2F;
+            border: 1px solid #3F3F46;
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            color: #E5EAF3;
+            position: relative;
+        }
+
+        .knowledge-item .delete-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            color: #EF4444;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .knowledge-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .message .save-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #4F46E5;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message:hover .save-btn {
+            opacity: 1;
+        }
+
+        .message {
+            position: relative;
+        }
+
+        /* 知识库页面样式 */
+        .knowledge-page {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 260px; /* 为左侧对话列表留出空间 */
+            right: 0;
+            bottom: 0;
+            background: #17171A;
+            z-index: 1000;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .knowledge-page.active {
+            display: block;
+        }
+
+        .knowledge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #2D2D30;
+        }
+
+        .knowledge-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #E5EAF3;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .group-section {
+            margin-bottom: 2rem;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: #1E1E21;
+            border-radius: 8px;
+        }
+
+        .group-name {
+            font-size: 1.1rem;
+            color: #E5EAF3;
+            font-weight: 500;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #4F46E5;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #2D2D30;
+            color: #E5EAF3;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .knowledge-item {
+            position: relative;
+            padding: 1rem;
+            background: #2B2B2F;
+            border: 1px solid #3F3F46;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .knowledge-item:hover {
+            border-color: #4F46E5;
+        }
+
+        .item-actions {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .knowledge-item:hover .item-actions {
+            opacity: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1E1E21;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal-header {
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            color: #E5EAF3;
+            margin: 0;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            background: #2B2B2F;
+            border: 1px solid #3F3F46;
+            border-radius: 4px;
+            color: #E5EAF3;
+            margin-bottom: 1rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        /* 对话列表侧边栏样式 */
+        .conversations-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            min-width: 0;
+            background: #1a1a1a;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            overflow: hidden;
+            border-right: 1px solid #2D2D30;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conversations-sidebar.expanded {
+            width: 260px;
+            min-width: 260px;
+        }
+
+        /* 修改主容器样式 */
+        .app-container {
+            padding-left: 10px;
+            transition: padding-left 0.3s ease;
+        }
+
+        .app-container.sidebar-expanded {
+            padding-left: 260px;
+        }
+
+        /* 添加触发区域 */
+        .sidebar-trigger {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 9999;
+            cursor: pointer;
+        }
+
+        .conversations-header {
+            padding: 1rem;
+            border-bottom: 1px solid #2D2D30;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1E1E21;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .new-chat-btn:hover {
+            background: #4338CA;
+            transform: translateY(-1px);
+        }
+
+        .icon-plus {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+        }
+
+        .conversation-item {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #E5EAF3;
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            background: #2B2B2F;
+        }
+
+        .conversation-item.active {
+            background: #2B2B2F;
+            border-color: #4F46E5;
+        }
+
+        .conversation-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .delete-conversation {
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: #EF4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 1.1rem;
+        }
+
+        .conversation-item:hover .delete-conversation {
+            opacity: 1;
+        }
+
+        .delete-conversation:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 对话列表侧边栏 -->
+        <div class="conversations-sidebar">
+            <div class="conversations-header">
+                <button class="new-chat-btn" id="new-chat-btn">
+                    <span class="icon-plus">+</span>
+                    新对话
+                </button>
+            </div>
+            <div class="conversations-list" id="conversations-list">
+                <!-- 对话列表将动态插入 -->
+            </div>
+        </div>
+
+        <div class="flex-1">
+            <div class="header">
+                <h1 class="text-2xl font-bold flex items-center">
+                    <span class="icon-robot mr-3"></span>
+                    Kimi 智能助手
+                </h1>
+            </div>
+            
+            <!-- 选项卡区域 -->
+            <div class="tabs-container">
+                <div class="tab active" data-mode="chat">
+                    <span class="icon-chat"></span>
+                    通用对话
+                </div>
+                <div class="tab" data-mode="translate">
+                    <span class="icon-translate"></span>
+                    翻译助手
+                </div>
+                <div class="tab" data-mode="knowledge">
+                    <span class="icon-book"></span>
+                    个人知识库
+                </div>
+            </div>
+            
+            <!-- 聊天消息区域 -->
+            <div id="chat-messages" class="chat-container">
+                <div class="bot-message message">
+                    你好！我是 Kimi，很高兴为您服务。请问有什么我可以帮您的吗？
+                </div>
+            </div>
+
+            <!-- 知识库抽屉 -->
+            <div id="knowledge-drawer" class="knowledge-drawer">
+                <div class="knowledge-header">
+                    <h3>个人知识库</h3>
+                    <button class="close-drawer">×</button>
+                </div>
+                <div class="knowledge-content">
+                    <div id="knowledge-items"></div>
+                </div>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <input type="text" id="message-input" 
+                           placeholder="发送消息给 Kimi...">
+                    <button id="send-button" class="send-button">
+                        <span class="icon-send mr-2"></span>
+                        发送
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 知识库页面 -->
+    <div id="knowledge-page" class="knowledge-page">
+        <div class="knowledge-header">
+            <h1 class="knowledge-title">
+                <span class="icon-book"></span>
+                个人知识库
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="create-group-btn">
+                    创建新分组
+                </button>
+                <button class="btn btn-secondary" id="back-to-chat">
+                    返回聊天
+                </button>
+            </div>
+        </div>
+        <div id="groups-container">
+            <!-- 分组内容将动态插入 -->
+        </div>
+    </div>
+
+    <!-- 创建分组模态框 -->
+    <div id="create-group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">创建新分组</h3>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="input-field" id="group-name-input" placeholder="输入分组名称">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-create-group">取消</button>
+                <button class="btn btn-primary" id="confirm-create-group">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动到分组模态框 -->
+    <div id="move-to-group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">移动到分组</h3>
+            </div>
+            <div class="modal-body">
+                <select class="input-field" id="group-select">
+                    <!-- 分组选项将动态插入 -->
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-move">取消</button>
+                <button class="btn btn-primary" id="confirm-move">移动</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 立即执行的初始化代码
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatMessages = document.getElementById('chat-messages');
+        const tabs = document.querySelectorAll('.tab');
+        const knowledgeDrawer = document.getElementById('knowledge-drawer');
+        const knowledgeItems = document.getElementById('knowledge-items');
+        let currentMode = 'chat'; // 当前模式：chat 或 translate 或 knowledge
+        let isGenerating = false; // 是否正在生成回复
+        let lastRequestTime = 0; // 上次请求时间
+        const MIN_REQUEST_INTERVAL = 3000; // 最小请求间隔（毫秒）
+        const MAX_RETRIES = 5; // 最大重试次数
+        const INITIAL_RETRY_DELAY = 3000; // 初始重试延迟（毫秒）
+        messageInput.focus();
+
+        // 对话相关变量和函数
+        let conversations = [];
+        let currentConversationId = null;
+
+        // 从后端加载对话记录
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                if (response.ok) {
+                    conversations = await response.json();
+                    if (conversations.length === 0) {
+                        await createNewConversation();
+                    } else {
+                        currentConversationId = conversations[0].id;
+                        renderConversations();
+                        loadCurrentConversation();
+                    }
+                } else {
+                    console.error('加载对话记录失败');
+                }
+            } catch (error) {
+                console.error('加载对话记录出错:', error);
+            }
+        }
+
+        // 创建新对话
+        async function createNewConversation() {
+            try {
+                const response = await fetch('/api/conversations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title: '新对话' })
+                });
+                
+                if (response.ok) {
+                    const newConversation = await response.json();
+                    conversations.unshift(newConversation);
+                    currentConversationId = newConversation.id;
+                    renderConversations();
+                    chatMessages.innerHTML = '';
+                    appendMessage('你好！我是 Kimi，很高兴为您服务。请问有什么我可以帮您的吗？', 'bot');
+                } else {
+                    console.error('创建新对话失败');
+                }
+            } catch (error) {
+                console.error('创建新对话出错:', error);
+            }
+        }
+
+        // 渲染对话列表
+        function renderConversations() {
+            const list = document.getElementById('conversations-list');
+            list.innerHTML = '';
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.className = `conversation-item${conv.id === currentConversationId ? ' active' : ''}`;
+                item.innerHTML = `
+                    <div class="conversation-title">${conv.title}</div>
+                    <button class="delete-conversation" data-id="${conv.id}">×</button>
+                `;
+                item.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('delete-conversation')) {
+                        switchConversation(conv.id);
+                    }
+                });
+                list.appendChild(item);
+            });
+        }
+
+        // 切换对话
+        async function switchConversation(conversationId) {
+            try {
+                const response = await fetch(`/api/conversations/${conversationId}`);
+                if (response.ok) {
+                    const conversation = await response.json();
+                    currentConversationId = conversation.id;
+                    renderConversations();
+                    chatMessages.innerHTML = '';
+                    conversation.messages.forEach(msg => {
+                        appendMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+                    });
+                } else {
+                    console.error('加载对话失败');
+                }
+            } catch (error) {
+                console.error('切换对话出错:', error);
+            }
+        }
+
+        // 加载当前对话的消息
+        function loadCurrentConversation() {
+            const conversation = conversations.find(c => c.id === currentConversationId);
+            if (conversation) {
+                chatMessages.innerHTML = '';
+                conversation.messages.forEach(msg => {
+                    appendMessage(msg.content, msg.type);
+                });
+            }
+        }
+
+        // 删除对话
+        async function deleteConversation(conversationId) {
+            if (confirm('确定要删除这个对话吗？')) {
+                try {
+                    const response = await fetch(`/api/conversations/${conversationId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        conversations = conversations.filter(c => c.id !== conversationId);
+                        if (conversations.length === 0) {
+                            await createNewConversation();
+                        } else if (currentConversationId === conversationId) {
+                            currentConversationId = conversations[0].id;
+                            await loadCurrentConversation();
+                        }
+                        renderConversations();
+                    } else {
+                        console.error('删除对话失败');
+                    }
+                } catch (error) {
+                    console.error('删除对话出错:', error);
+                }
+            }
+        }
+
+        // 从后端加载知识库
+        async function loadKnowledgeBase() {
+            try {
+                const response = await fetch('/api/knowledge');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (currentMode === 'knowledge') {
+                        renderGroups(data.items);  // 在知识库页面使用分组渲染
+                    } else {
+                        renderKnowledgeItems(data.items);  // 在抽屉中使用简单渲染
+                    }
+                } else {
+                    console.error('加载知识库失败');
+                }
+            } catch (error) {
+                console.error('加载知识库出错:', error);
+            }
+        }
+
+        // 在抽屉中渲染知识库条目（简单列表形式）
+        function renderKnowledgeItems(groups) {
+            knowledgeItems.innerHTML = '';
+            // 合并所有分组的条目
+            const allItems = groups.reduce((acc, group) => acc.concat(group.items), []);
+            // 按时间排序
+            allItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            allItems.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'knowledge-item';
+                div.innerHTML = `
+                    <div class="knowledge-content">${item.content}</div>
+                    <div class="knowledge-meta">
+                        <span class="knowledge-time">${formatDate(item.timestamp)}</span>
+                        <button class="delete-btn" data-id="${item.id}">×</button>
+                    </div>
+                `;
+                knowledgeItems.appendChild(div);
+            });
+        }
+
+        // 在知识库页面渲染分组
+        function renderGroups(groups) {
+            groupsContainer.innerHTML = '';
+            
+            // 添加未分组区域
+            const ungroupedItems = groups.find(g => g.name === '未分组') || { name: '未分组', items: [] };
+            renderGroupSection(ungroupedItems);
+
+            // 渲染其他分组
+            groups.filter(g => g.name !== '未分组').forEach(group => {
+                renderGroupSection(group);
+            });
+        }
+
+        // 渲染单个分组区域
+        function renderGroupSection(group) {
+            const section = document.createElement('div');
+            section.className = 'group-section';
+            section.innerHTML = `
+                <div class="group-header">
+                    <div class="group-name">${group.name}</div>
+                    <div class="group-actions">
+                        ${group.name !== '未分组' ? '<button class="btn btn-secondary delete-group-btn">删除分组</button>' : ''}
+                    </div>
+                </div>
+                <div class="group-items">
+                    ${group.items.map(item => `
+                        <div class="knowledge-item" data-id="${item.id}">
+                            <div class="knowledge-content">${item.content}</div>
+                            <div class="item-actions">
+                                <button class="btn btn-secondary move-item-btn">移动</button>
+                                <button class="btn btn-secondary delete-item-btn">删除</button>
+                            </div>
+                            <div class="knowledge-meta">
+                                <span class="knowledge-time">${formatDate(item.timestamp)}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            if (currentMode === 'knowledge') {
+                groupsContainer.appendChild(section);
+            } else {
+                knowledgeItems.appendChild(section);
+            }
+        }
+
+        // 格式化日期
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+
+        // 选项卡切换
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentMode = tab.dataset.mode;
+                
+                if (currentMode === 'knowledge') {
+                    document.querySelector('.flex-1').style.display = 'none';
+                    knowledgePage.classList.add('active');
+                    loadKnowledgeBase();
+                } else {
+                    document.querySelector('.flex-1').style.display = 'flex';
+                    knowledgePage.classList.remove('active');
+                    messageInput.placeholder = currentMode === 'chat' 
+                        ? "发送消息给 Kimi..." 
+                        : "输入要翻译的文本...";
+                    
+                    const modeMessage = currentMode === 'chat'
+                        ? "已切换到通用对话模式，您可以问我任何问题。"
+                        : "已切换到翻译助手模式，请输入要翻译的文本，我会自动识别语言并进行翻译。";
+                    
+                    appendMessage(modeMessage, 'bot');
+                }
+            });
+        });
+
+        // 返回聊天界面
+        document.getElementById('back-to-chat').addEventListener('click', () => {
+            knowledgePage.classList.remove('active');
+            document.querySelector('.flex-1').style.display = 'flex';
+            // 切换回聊天模式
+            tabs.forEach(t => {
+                if (t.dataset.mode === 'chat') {
+                    t.click();
+                }
+            });
+        });
+
+        // 事件监听
+        document.getElementById('new-chat-btn').addEventListener('click', createNewConversation);
+
+        document.getElementById('conversations-list').addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-conversation')) {
+                const conversationId = parseInt(e.target.dataset.id);
+                deleteConversation(conversationId);
+            }
+        });
+
+        // 初始化
+        loadConversations();
+
+        // 修改事件监听代码
+        const sidebar = document.querySelector('.conversations-sidebar');
+        const appContainer = document.querySelector('.app-container');
+        
+        // 创建触发区域
+        const trigger = document.createElement('div');
+        trigger.className = 'sidebar-trigger';
+        document.body.appendChild(trigger);
+
+        // 添加鼠标进入触发区域的事件
+        trigger.addEventListener('mouseenter', () => {
+            console.log('Mouse entered trigger area');
+            sidebar.classList.add('expanded');
+            appContainer.classList.add('sidebar-expanded');
+        });
+
+        // 添加鼠标离开侧边栏的事件
+        sidebar.addEventListener('mouseleave', () => {
+            console.log('Mouse left sidebar');
+            sidebar.classList.remove('expanded');
+            appContainer.classList.remove('sidebar-expanded');
+        });
+
+        // 添加调试事件
+        trigger.addEventListener('click', () => {
+            console.log('Trigger clicked');
+        });
+
+        // 添加触摸事件支持
+        trigger.addEventListener('touchstart', (e) => {
+            console.log('Touch started on trigger');
+            e.preventDefault();
+            sidebar.classList.add('expanded');
+            appContainer.classList.add('sidebar-expanded');
+        });
+
+        // 确保触发区域在最上层
+        trigger.style.zIndex = '9999';
+
+        // 修改 appendMessage 函数，添加消息保存功能
+        async function appendMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = content;
+            
+            // 为bot消息添加保存按钮
+            if (type === 'bot' || type === 'bot-message') {
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'save-to-kb';
+                saveBtn.textContent = '加入知识库';
+                saveBtn.onclick = async () => {
+                    try {
+                        const response = await fetch('/api/knowledge', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                content: content
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            saveBtn.textContent = '已添加 ✓';
+                            saveBtn.style.background = '#10B981';
+                            setTimeout(() => {
+                                saveBtn.textContent = '加入知识库';
+                                saveBtn.style.background = '#4F46E5';
+                            }, 2000);
+                        } else {
+                            throw new Error('添加失败');
+                        }
+                    } catch (error) {
+                        saveBtn.textContent = '添加失败 ×';
+                        saveBtn.style.background = '#EF4444';
+                        setTimeout(() => {
+                            saveBtn.textContent = '加入知识库';
+                            saveBtn.style.background = '#4F46E5';
+                        }, 2000);
+                    }
+                };
+                messageDiv.appendChild(saveBtn);
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            
+            // 保存消息到数据库
+            if (currentConversationId) {
+                try {
+                    await saveMessage(content, type === 'user' ? 'user' : 'assistant');
+                    
+                    // 如果是用户的第一条消息，更新对话标题
+                    const conversation = conversations.find(c => c.id === currentConversationId);
+                    if (type === 'user' && conversation && (!conversation.messages || conversation.messages.length === 0)) {
+                        conversation.title = content.length > 20 ? content.substring(0, 20) + '...' : content;
+                        renderConversations();
+                    }
+                } catch (error) {
+                    console.error('保存消息失败:', error);
+                }
+            }
+            
+            const shouldAutoScroll = chatMessages.scrollTop + chatMessages.clientHeight >= chatMessages.scrollHeight - 50;
+            if (shouldAutoScroll) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            updateScrollIndicator();
+        }
+
+        // 修改发送消息函数
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isGenerating) return;
+
+            // 添加用户消息到界面
+            appendMessage(message, 'user');
+            messageInput.value = '';
+
+            // 创建机器人消息容器
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            const loadingDots = createLoadingDots();
+            botMessageDiv.appendChild(loadingDots);
+            chatMessages.appendChild(botMessageDiv);
+
+            isGenerating = true;
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: [
+                            {
+                                role: currentMode === 'translate' ? 'system' : 'user',
+                                content: currentMode === 'translate' 
+                                    ? "你现在是一个翻译助手。如果用户输入中文，你需要将其翻译成英文；如果用户输入英文，你需要将其翻译成中文。只需要输出翻译结果，不需要其他解释。"
+                                    : message
+                            },
+                            {
+                                role: 'user',
+                                content: message
+                            }
+                        ],
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('请求失败');
+                }
+
+                botMessageDiv.removeChild(loadingDots);
+                const textContainer = document.createElement('div');
+                botMessageDiv.appendChild(textContainer);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let responseText = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            try {
+                                const parsedChunk = JSON.parse(line);
+                                if (parsedChunk.response) {
+                                    responseText += parsedChunk.response;
+                                    textContainer.textContent = responseText;
+                                    if (chatMessages.scrollTop + chatMessages.clientHeight >= chatMessages.scrollHeight - 100) {
+                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('解析响应chunk失败:', e, line);
+                            }
+                        }
+                    }
+                }
+
+                // 添加保存到知识库的按钮
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'save-to-kb';
+                saveBtn.textContent = '加入知识库';
+                botMessageDiv.appendChild(saveBtn);
+
+                // 保存机器人的回复
+                if (responseText) {
+                    await saveMessage(responseText, 'assistant');
+                }
+
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                botMessageDiv.innerHTML = `
+                    <div style="color: #EF4444;">
+                        发送消息失败：${error.message}
+                    </div>
+                `;
+            } finally {
+                isGenerating = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // 添加侧边栏相关的样式
+        const styles = document.createElement('style');
+        styles.textContent = `
+            .app-container {
+                padding-left: 10px;
+                transition: padding-left 0.3s ease;
+            }
+            
+            .conversations-sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 0;
+                min-width: 0;
+                background: #1a1a1a;
+                transition: width 0.3s ease, min-width 0.3s ease;
+                z-index: 1000;
+                overflow: hidden;
+            }
+            
+            .conversations-sidebar:hover,
+            .conversations-sidebar.expanded {
+                width: 260px;
+                min-width: 260px;
+            }
+            
+            .sidebar-trigger {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 10px;
+                z-index: 999;
+                cursor: pointer;
+            }
+            
+            .app-container.sidebar-expanded {
+                padding-left: 260px;
+            }
+            
+            .new-chat-btn {
+                width: 100%;
+                padding: 8px 16px;
+                background: #4F46E5;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                margin: 8px 0;
+                transition: background 0.2s;
+            }
+            
+            .new-chat-btn:hover {
+                background: #4338CA;
+            }
+            
+            .conversation-item {
+                padding: 8px 16px;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                color: #E5E7EB;
+                transition: background 0.2s;
+            }
+            
+            .conversation-item:hover {
+                background: #374151;
+            }
+            
+            .conversation-item.active {
+                background: #4F46E5;
+            }
+            
+            .delete-conversation {
+                padding: 4px 8px;
+                background: #EF4444;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            
+            .conversation-item:hover .delete-conversation {
+                opacity: 1;
+            }
+        `;
+        document.head.appendChild(styles);
+
+        // 添加保存消息的函数
+        async function saveMessage(content, role) {
+            try {
+                const response = await fetch(`/api/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        role: role
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('保存消息失败');
+                }
+            } catch (error) {
+                console.error('保存消息出错:', error);
+            }
+        }
+
+        // 添加滚动指示器更新函数
+        function updateScrollIndicator() {
+            const container = document.getElementById('chat-messages');
+            if (container.scrollHeight > container.clientHeight) {
+                container.classList.add('can-scroll');
+            } else {
+                container.classList.remove('can-scroll');
+            }
+        }
+
+        // 添加加载动画创建函数
+        function createLoadingDots() {
+            const container = document.createElement('div');
+            container.className = 'typing-container';
+            const typing = document.createElement('div');
+            typing.className = 'typing';
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('span');
+                dot.style.animationDelay = `${i * 0.2}s`;
+                typing.appendChild(dot);
+            }
+            container.appendChild(typing);
+            return container;
+        }
+
+        // 重新初始化侧边栏触发器
+        function initializeSidebar() {
+            const sidebar = document.querySelector('.conversations-sidebar');
+            const appContainer = document.querySelector('.app-container');
+            const trigger = document.createElement('div');
+            
+            // 删除可能存在的旧触发器
+            const oldTrigger = document.querySelector('.sidebar-trigger');
+            if (oldTrigger) {
+                oldTrigger.remove();
+            }
+            
+            trigger.className = 'sidebar-trigger';
+            trigger.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            trigger.style.zIndex = '9999';
+            document.body.appendChild(trigger);
+
+            console.log('Sidebar trigger initialized');
+
+            trigger.addEventListener('mouseenter', () => {
+                console.log('Mouse entered trigger area');
+                sidebar.classList.add('expanded');
+                appContainer.classList.add('sidebar-expanded');
+            });
+
+            sidebar.addEventListener('mouseleave', () => {
+                console.log('Mouse left sidebar');
+                sidebar.classList.remove('expanded');
+                appContainer.classList.remove('sidebar-expanded');
+            });
+
+            trigger.addEventListener('click', () => {
+                console.log('Trigger clicked');
+                sidebar.classList.toggle('expanded');
+                appContainer.classList.toggle('sidebar-expanded');
+            });
+        }
+
+        // 在页面加载完成后初始化侧边栏
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded');
+            initializeSidebar();
+        });
+
+        // 立即初始化侧边栏（以防DOMContentLoaded已经触发）
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            console.log('Initializing sidebar immediately');
+            initializeSidebar();
+        }
+    </script>
+</body>
+</html> 
