@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kimi 智能助手</title>
+    <style>
+        /* 保留原有样式 */
+        /* ... 在这里插入原有的所有样式直到 .bot-message ... */
+        
+        .bot-message {
+            background: #1E1E21;
+            color: #E5EAF3;
+            margin-right: auto;
+            border: 1px solid #3F3F46;
+            position: relative;
+        }
+        
+        /* 新的知识库按钮样式 */
+        .save-to-kb {
+            position: absolute;
+            right: -120px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4F46E5;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .save-to-kb:hover {
+            background: #4338CA;
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .bot-message:hover .save-to-kb {
+            display: flex;
+        }
+        
+        /* ... 其他原有样式 ... */
+    </style>
+</head>
+<body>
+    <!-- 保持原有的HTML结构 -->
+    
+    <script>
+        // 修改消息发送和渲染逻辑
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isGenerating) return;
+
+            const currentTime = Date.now();
+            const timeSinceLastRequest = currentTime - lastRequestTime;
+            if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+                // ... 频率限制代码保持不变 ...
+                return;
+            }
+
+            isGenerating = true;
+            sendButton.disabled = true;
+            
+            // 创建用户消息
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user-message';
+            userMessageDiv.textContent = message;
+            chatMessages.appendChild(userMessageDiv);
+            messageInput.value = '';
+
+            // 创建机器人消息容器
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            const loadingDots = createLoadingDots();
+            botMessageDiv.appendChild(loadingDots);
+            chatMessages.appendChild(botMessageDiv);
+            
+            let retryCount = 0;
+            while (retryCount < MAX_RETRIES) {
+                try {
+                    // ... API调用代码保持不变 ...
+                    
+                    const data = await response.json();
+                    
+                    if (!data || !data.response) {
+                        throw new Error('返回数据格式错误');
+                    }
+                    
+                    botMessageDiv.removeChild(loadingDots);
+                    
+                    // 创建文本容器
+                    const textContainer = document.createElement('div');
+                    await typeWriter(textContainer, data.response);
+                    botMessageDiv.appendChild(textContainer);
+
+                    // 创建保存按钮
+                    const saveButton = document.createElement('button');
+                    saveButton.className = 'save-to-kb';
+                    saveButton.textContent = '加入知识库';
+                    
+                    saveButton.onclick = async () => {
+                        try {
+                            const response = await fetch('/api/knowledge', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    content: data.response
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                saveButton.textContent = '已添加 ✓';
+                                saveButton.style.background = '#10B981';
+                                setTimeout(() => {
+                                    saveButton.textContent = '加入知识库';
+                                    saveButton.style.background = '#4F46E5';
+                                }, 2000);
+                            } else {
+                                throw new Error('添加失败');
+                            }
+                        } catch (error) {
+                            saveButton.textContent = '添加失败 ×';
+                            saveButton.style.background = '#EF4444';
+                            setTimeout(() => {
+                                saveButton.textContent = '加入知识库';
+                                saveButton.style.background = '#4F46E5';
+                            }, 2000);
+                        }
+                    };
+                    
+                    botMessageDiv.appendChild(saveButton);
+                    break;
+                } catch (error) {
+                    // ... 错误处理代码保持不变 ...
+                }
+            }
+
+            isGenerating = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+            updateScrollIndicator();
+        }
+
+        // ... 其他原有的JavaScript代码 ...
+    </script>
+</body>
+</html> 
